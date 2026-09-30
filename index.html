@@ -1,14 +1,19 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es"
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>IPTV Smarters - Colombia Live TV</title>
-  <!-- HLS.js para streams .m3u8 -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-  <!-- Iconos Lucide/FontAwesome -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <link rel="manifest" href="./manifest.json">
   
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="#0b0e14">
+  <meta name="apple-mobile-web-app-title" content="ColombiaTV">
+  <link rel="apple-touch-icon" href="https://flaticon.com">
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
   <style>
     :root {
       --bg-dark: #0b0e14;
@@ -595,6 +600,13 @@
     }
 
     cargarCanales();
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker activo', reg))
+        .catch(err => console.error('Error al registrar SW', err));
+    });
+  }
   </script>
 </body>
 </html>
