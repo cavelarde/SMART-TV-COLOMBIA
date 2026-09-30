@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPTV Smarters - Colombia Live TV</title>
+  <link rel="manifest" href="./manifest.json">
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="#0b0e14">
+  <meta name="apple-mobile-web-app-title" content="ColombiaTV">
+  <link rel="apple-touch-icon" href="https://flaticon.com">
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <style>
+    :root {
+      --bg-dark: #0b0e14;
+      --bg-card: #161b26;
+      --bg-card-hover: #1f2638;
+      --bg-sidebar: #111520;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-glow: rgba(99, 102, 241, 0.35);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border-color: #262d40;
+      --live-red: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    body { background-color: var(--bg-dark); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+    /* Header Superior */
+    header {
+      background: var(--bg-sidebar);
+      border-bottom: 1px solid var(--border-color);
+      height: 65px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .brand i { color: var(--accent); font-size: 24px; }
+    .brand span { color: var(--accent); }
+
+    .search-box {
+      position: relative;
+      width: 380px;
+    }
+    .search-box input {
+      width: 100%;
+      background: #1a202c;
+      border: 1px solid var(--border-color);
+      padding: 10px 16px 10px 42px;
+      border-radius: 20px;
+      color: var(--text-main);
+      font-size: 14px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .search-box input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+    .search-box i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .badge-count {
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--accent);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+
+    /* Layout Principal */
+    .app-body {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 65px);
+      overflow: hidden;
+    }
+
+    /* Sidebar de Categorías */
+    aside {
+      width: 260px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      padding: 16px 0;
+    }
+
+    .sidebar-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      padding: 0 20px 12px;
+      font-weight: 700;
+    }
+
+    .category-list {
+      list-style: none;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .category-item {
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+    .category-item:hover {
+      background: var(--bg-card);
+      color: var(--text-main);
+    }
+    .category-item.active {
+      background: rgba(99, 102, 241, 0.1);
+      color: #fff;
+      border-left-color: var(--accent);
+      font-weight: 600;
+    }
+    .category-item i { margin-right: 10px; width: 16px; text-align: center; }
+
+    /* Área Contenido Canales */
+    main {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 20px;
+    }
+
+    /* Tarjeta IPTV Smarters */
+    .channel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+    .channel-card:hover {
+      transform: translateY(-6px);
+      background: var(--bg-card-hover);
+      border-color: var(--accent);
+      box-shadow: 0 8px 24px var(--accent-glow);
+    }
+
+    .card-thumb-container {
+      height: 125px;
+      background: #0f131d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      position: relative;
+    }
+
+    .card-thumb {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.5));
+    }
+
+    .quality-tag {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      color: #38bdf8;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      backdrop-filter: blur(4px);
+    }
+
+    .live-badge {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(239, 68, 68, 0.2);
+      color: var(--live-red);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--live-red);
+      border-radius: 50%;
+      box-shadow: 0 0 6px var(--live-red);
+    }
+
+    .card-info {
+      padding: 12px 14px;
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .card-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Modal Reproductor Smarters */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(8px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-box {
+      background: #121620;
+      width: 90%;
+      max-width: 960px;
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      overflow: hidden;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+      position: relative;
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      background: #181d2a;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-channel-details {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .modal-channel-details img {
+      height: 32px;
+      max-width: 60px;
+      object-fit: contain;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .close-btn {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: #fff;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .close-btn:hover { background: var(--live-red); }
+
+    .video-wrapper {
+      position: relative;
+      background: #000;
+      aspect-ratio: 16/9;
+    }
+
+    video { width: 100%; height: 100%; display: block; }
+
+    /* Estado Carga/Mensajes */
+    .status-container {
+      text-align: center;
+      padding: 80px 20px;
+      color: var(--text-muted);
+    }
+    .spinner {
+      border: 3px solid rgba(255,255,255,0.1);
+      border-top: 3px solid var(--accent);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <i class="fa-solid fa-tv"></i>
+      <div>SMART<span>TV</span>COLOMBIA</div>
+    </div>
+
+    <div class="search-box">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="searchInput" placeholder="Buscar canal..." oninput="filtrarCanales()">
+    </div>
+
+    <div class="user-info">
+      <div class="badge-count" id="totalCount">0 Canales</div>
+      <i class="fa-solid fa-circle-user fa-xl"></i>
+    </div>
+  </header>
+
+  <!-- Cuerpo de la App -->
+  <div class="app-body">
+    <!-- Categorías -->
+    <aside>
+      <div class="sidebar-title">Categorías</div>
+      <ul class="category-list" id="categoryList">
+        <li class="category-item active" onclick="filtrarCategoria('TODOS', this)">
+          <span><i class="fa-solid fa-list"></i> Todos los Canales</span>
+        </li>
+      </ul>
+    </aside>
+
+    <!-- Grilla de Canales -->
+    <main>
+      <div id="statusMsg" class="status-container">
+        <div class="spinner"></div>
+        <p>Cargando lista de canales IPTV...</p>
+      </div>
+      <div class="grid-container" id="channelsContainer"></div>
+    </main>
+  </div>
+
+  <!-- Modal Reproductor -->
+  <div class="modal-overlay" id="playerModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-channel-details">
+          <img id="modalLogo" src="" alt="Logo" onerror="this.style.display='none'">
+          <span class="modal-title" id="modalTitle">Nombre del Canal</span>
+        </div>
+        <button class="close-btn" onclick="cerrarReproductor()"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="video-wrapper">
+        <video id="videoPlayer" controls></video>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const M3U_URL = 'https://iptv-org.github.io/iptv/countries/co.m3u';
+    let listaCanales = [];
+    let categoriaActual = 'TODOS';
+    let hlsInstance = null;
+
+    const container = document.getElementById('channelsContainer');
+    const statusMsg = document.getElementById('statusMsg');
+    const categoryList = document.getElementById('categoryList');
+    const totalCount = document.getElementById('totalCount');
+    const playerModal = document.getElementById('playerModal');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalLogo = document.getElementById('modalLogo');
+
+    // 1. Obtener y parsear M3U
+    async function cargarCanales() {
+      try {
+        const res = await fetch(M3U_URL);
+        const data = await res.text();
+        listaCanales = parsearM3U(data);
+
+        statusMsg.style.display = 'none';
+        generarCategorias();
+        renderizarGrilla(listaCanales);
+      } catch (err) {
+        statusMsg.innerHTML = '<i class="fa-solid fa-triangle-exclamation fa-2xl"></i><p style="margin-top:12px;">Error al cargar la lista de canales.</p>';
+        console.error(err);
+      }
+    }
+
+    // 2. Parser M3U Avanzado
+    function parsearM3U(m3uText) {
+      const lineas = m3uText.split('\n');
+      const lista = [];
+      let canal = {};
+
+      lineas.forEach(linea => {
+        linea = linea.trim();
+        if (linea.startsWith('#EXTINF:')) {
+          const nombreMatch = linea.match(/,(.+)$/);
+          const logoMatch = linea.match(/tvg-logo="([^"]+)"/);
+          const grupoMatch = linea.match(/group-title="([^"]+)"/);
+
+          const nombre = nombreMatch ? nombreMatch[1].trim() : 'Canal Local';
+          let res = 'HD';
+          if (nombre.includes('1080p') || nombre.includes('FHD')) res = 'FHD';
+          else if (nombre.includes('720p')) res = 'HD';
+          else if (nombre.includes('480p') || nombre.includes('360p')) res = 'SD';
+
+          canal = {
+            nombre: nombre,
+            logo: logoMatch && logoMatch[1] ? logoMatch[1] : '',
+            categoria: grupoMatch && grupoMatch[1] ? grupoMatch[1].trim() : 'General',
+            resolucion: res
+          };
+        } else if (linea.startsWith('http')) {
+          canal.streamUrl = linea;
+          lista.push(canal);
+          canal = {};
+        }
+      });
+      return lista;
+    }
+
+    // 3. Generar Categorías dinámicas en el Sidebar
+    function generarCategorias() {
+      const categorias = new Set();
+      listaCanales.forEach(c => {
+        if (c.categoria) categorias.add(c.categoria);
+      });
+
+      categorias.forEach(cat => {
+        const li = document.createElement('li');
+        li.className = 'category-item';
+        li.innerHTML = `<span><i class="fa-solid fa-folder"></i> ${cat}</span>`;
+        li.onclick = () => filtrarCategoria(cat, li);
+        categoryList.appendChild(li);
+      });
+    }
+
+    // 4. Renderizar tarjetas
+    function renderizarGrilla(canales) {
+      container.innerHTML = '';
+      totalCount.innerText = `${canales.length} Canales`;
+
+      canales.forEach(ch => {
+        const logoUrl = ch.logo || 'https://via.placeholder.com/150x80/161b26/ffffff?text=TV';
+        const card = document.createElement('div');
+        card.className = 'channel-card';
+        card.innerHTML = `
+          <div class="card-thumb-container">
+            <span class="live-badge"><span class="live-dot"></span> EN VIVO</span>
+            <span class="quality-tag">${ch.resolucion}</span>
+            <img class="card-thumb" src="${logoUrl}" alt="${ch.nombre}" onerror="this.src='https://via.placeholder.com/150x80/161b26/ffffff?text=TV'">
+          </div>
+          <div class="card-info">
+            <div class="card-name">${ch.nombre}</div>
+            <div class="card-meta">
+              <span>${ch.categoria}</span>
+              <i class="fa-solid fa-play" style="color:var(--accent);"></i>
+            </div>
+          </div>
+        `;
+        card.onclick = () => abrirReproductor(ch);
+        container.appendChild(card);
+      });
+    }
+
+    // 5. Filtros
+    function filtrarCategoria(cat, elemento) {
+      categoriaActual = cat;
+      document.querySelectorAll('.category-item').forEach(el => el.classList.remove('active'));
+      elemento.classList.add('active');
+      filtrarCanales();
+    }
+
+    function filtrarCanales() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const filtrados = listaCanales.filter(c => {
+        const coincideCat = categoriaActual === 'TODOS' || c.categoria === categoriaActual;
+        const coincideBusqueda = c.nombre.toLowerCase().includes(query);
+        return coincideCat && coincideBusqueda;
+      });
+      renderizarGrilla(filtrados);
+    }
+
+    // 6. Reproducción
+    function abrirReproductor(canal) {
+      modalTitle.innerText = canal.nombre;
+      if (canal.logo) {
+        modalLogo.src = canal.logo;
+        modalLogo.style.display = 'block';
+      } else {
+        modalLogo.style.display = 'none';
+      }
+      playerModal.style.display = 'flex';
+
+      if (Hls.isSupported()) {
+        if (hlsInstance) hlsInstance.destroy();
+
+        hlsInstance = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+          backBufferLength: 10,
+          maxBufferLength: 10
+        });
+
+        hlsInstance.loadSource(canal.streamUrl);
+        hlsInstance.attachMedia(videoPlayer);
+        hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+          videoPlayer.play().catch(() => {});
+        });
+
+        hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                hlsInstance.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                hlsInstance.recoverMediaError();
+                break;
+              default:
+                cerrarReproductor();
+                alert("Canal no disponible temporalmente.");
+                break;
+            }
+          }
+        });
+      } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+        videoPlayer.src = canal.streamUrl;
+        videoPlayer.play();
+      }
+    }
+
+    function cerrarReproductor() {
+      playerModal.style.display = 'none';
+      videoPlayer.pause();
+      if (hlsInstance) {
+        hlsInstance.destroy();
+        hlsInstance = null;
+      }
+    }
+
+    cargarCanales();
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then((reg) => console.log('Service Worker registrado con éxito', reg.scope))
+          .catch((err) => console.error('Error al registrar el Service Worker', err));
+      });
+    }
+  </script>
+</body>
+</html>
